@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CD-IELTS Admin Panel Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .admin-box { max-width: 900px; background: white; padding: 30px; margin: 0 auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1, h3 { color: #2b3d52; }
+        input[type="text"], textarea, select { width: 100%; padding: 10px; margin: 8px 0 20px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        textarea { height: 150px; font-family: inherit; }
+        .section-block { background: #fafafa; border: 1px solid #e2e8f0; padding: 20px; border-radius: 6px; margin-bottom: 25px; }
+        .q-entry { background: #fff; border-left: 4px solid #0073e6; padding: 15px; margin: 10px 0; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        button { background: #0073e6; color: white; border: none; padding: 12px 25px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #0059b3; }
+        .generate-btn { background: #28a745; width: 100%; padding: 15px; font-size: 18px; margin-top: 20px; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .generate-btn:hover { background: #218838; }
+        #output-area { margin-top: 25px; display: none; }
+        .url-box { background: #e9ecef; padding: 15px; border-radius: 4px; border: 1px dashed #495057; font-family: monospace; word-break: break-all; margin-top: 10px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="admin-box">
+    <h1>CD-IELTS Exam Creator Dashboard</h1>
+    <p>Input your passages and dynamic question groups below. Once done, generate the dynamic single-link exam URL!</p>
+    
+    <div id="passages-container">
+        <div class="section-block" id="passage-sec-1">
+            <h3>Passage 1 Configuration</h3>
+            <label><strong>Passage Title</strong></label>
+            <input type="text" id="p1-title" placeholder="e.g., The History of Printing Press">
+            
+            <label><strong>Passage Content (Use standard HTML paragraph tags like &lt;p&gt; for spacing)</strong></label>
+            <textarea id="p1-content" placeholder="Type or paste paragraph text here..."></textarea>
+            
+            <h4>Question Groups for Passage 1</h4>
+            <div id="p1-groups"></div>
+            <button type="button" onclick="addQuestionGroup(1)">+ Add Question Group Variation</button>
+        </div>
+    </div>
+
+    <button class="generate-btn" onclick="generateExamLink()">Generate Final Exam Link & QR Data</button>
+
+    <div id="output-area">
+        <h3>🚀 Your Live Exam Link:</h3>
+        <p>Copy this URL and link it directly to your QR Code Generator software tool:</p>
+        <div class="url-box" id="final-link"></div>
+    </div>
+</div>
+
+<script>
+    let groupCounters = { 1: 0 };
+
+    function addQuestionGroup(passageNum) {
+        groupCounters[passageNum]++;
+        const gId = groupCounters[passageNum];
+        const container = document.getElementById(`p${passageNum}-groups`);
+        
+        const groupHtml = `
+            <div class="section-block" style="background: #edf2f7;" id="p${passageNum}-g${gId}">
+                <label><strong>Select Question Variation Type:</strong></label>
+                <select id="p${passageNum}-g${gId}-type" onchange="renderQuestionInputs(${passageNum}, ${gId})">
+                    <option value="">-- Choose Variation --</option>
+                    <option value="MCQ">Multiple Choice Questions (MCQ)</option>
+                    <option value="GAP">Gap Filling / Sentence Completion</option>
+                    <option value="TF">True / False / Not Given</option>
+                </select>
+                <div id="p${passageNum}-g${gId}-fields"></div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', groupHtml);
+    }
+
+    function renderQuestionInputs(pNum, gId) {
+        const type = document.getElementById(`p${pNum}-g${gId}-type`).value;
+        const targetDiv = document.getElementById(`p${pNum}-g${gId}-fields`);
+        targetDiv.innerHTML = '';
+        
+        let fieldsHtml = '';
+        if(type === "MCQ" || type === "GAP" || type === "TF") {
+            fieldsHtml = `
+                <label>Number of Questions:</label>
+                <input type="number" id="p${pNum}-g${gId}-count" value="4" min="1" onchange="generateIndividualQuestions(${pNum}, ${gId}, '${type}')">
+                <div id="p${pNum}-g${gId}-q-list"></div>
+            `;
+        }
+        targetDiv.innerHTML = fieldsHtml;
+        generateIndividualQuestions(pNum, gId, type);
+    }
+
+    function generateIndividualQuestions(pNum, gId, type) {
+        const count = document.getElementById(`p${pNum}-g${gId}-count`).value;
+        const listDiv = document.getElementById(`p${pNum}-g${gId}-q-list`);
+        if(!listDiv) return;
+        listDiv.innerHTML = '';
+        
+        for(let i=1; i<=count; i++) {
+            let qHtml = `<div class="q-entry"><p><strong>Question ${i}</strong></p>`;
+            if(type === "MCQ") {
+                qHtml += `
+                    <input type="text" class="q-text" placeholder="Question instruction/text">
+                    <input type="text" class="opt-A" placeholder="Option A">
+                    <input type="text" class="opt-B" placeholder="Option B">
+                    <input type="text" class="opt-C" placeholder="Option C">
+                    <input type="text" class="opt-D" placeholder="Option D">
+                    <select class="q-ans"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+                `;
+            } else if(type === "GAP") {
+                qHtml += `
+                    <input type="text" class="q-text" placeholder="Use [blank] where the text box entry should go inside sentence">
+                    <input type="text" class="q-ans" placeholder="Correct exact text answer matching verification">
+                `;
+            } else if(type === "TF") {
+                qHtml += `
+                    <input type="text" class="q-text" placeholder="Statement text here">
+                    <select class="q-ans"><option value="TRUE">TRUE</option><option value="FALSE">FALSE</option><option value="NOT GIVEN">NOT GIVEN</option></select>
+                `;
+            }
+            qHtml += `</div>`;
+            listDiv.insertAdjacentHTML('beforeend', qHtml);
+        }
+    }
+
+    function generateExamLink() {
+        const examData = {
+            title: document.getElementById('p1-title').value,
+            passage: document.getElementById('p1-content').value,
+            groups: []
+        };
+        
+        const totalGroups = groupCounters[1];
+        for(let g=1; g<=totalGroups; g++) {
+            const groupSelect = document.getElementById(`p1-g${g}-type`);
+            if(!groupSelect) continue;
+            const gType = groupSelect.value;
+            if(!gType) continue;
+            
+            const groupObj = { type: gType, questions: [] };
+            const qEntries = document.querySelectorAll(`#p1-g${g}-q-list .q-entry`);
+            
+            qEntries.forEach(entry => {
+                let qData = { text: entry.querySelector('.q-text').value };
+                if(gType === "MCQ") {
+                    qData.options = [
+                        entry.querySelector('.opt-A').value,
+                        entry.querySelector('.opt-B').value,
+                        entry.querySelector('.opt-C').value,
+                        entry.querySelector('.opt-D').value
+                    ];
+                    qData.correct = entry.querySelector('.q-ans').value;
+                } else {
+                    qData.correct = entry.querySelector('.q-ans').value.trim();
+                }
+                groupObj.questions.push(qData);
+            });
+            examData.groups.push(groupObj);
+        }
+        
+        const base64Data = btoa(unescape(encodeURIComponent(JSON.stringify(examData))));
+        const currentDomain = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+        const finalUrl = `${currentDomain}/index.html?payload=${base64Data}`;
+        
+        document.getElementById('final-link').innerText = finalUrl;
+        document.getElementById('output-area').style.display = 'block';
+    }
+</script>
+</body>
+</html>
