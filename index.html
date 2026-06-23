@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Computer-Based IELTS Reading Simulator</title>
+    <style>
+        :root {
+            --ielts-blue: #2b3d52;
+            --ielts-red: #de4437;
+            --bg-light: #f1f5f9;
+            --border-color: #cbd5e1;
+            --text-dark: #0f172a;
+        }
+
+        * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+        body { margin: 0; padding: 0; background-color: var(--bg-light); display: flex; flex-direction: column; height: 100vh; overflow: hidden; font-size: 16px; color: var(--text-dark); }
+        
+        header { background-color: var(--ielts-blue); color: white; padding: 10px 25px; display: flex; justify-content: space-between; align-items: center; height: 55px; border-bottom: 4px solid var(--ielts-red); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .logo-section { font-size: 18px; font-weight: bold; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
+        .logo-badge { background: var(--ielts-red); padding: 3px 8px; border-radius: 3px; font-size: 12px; }
+        .timer-section { background: var(--ielts-red); padding: 6px 20px; border-radius: 4px; font-size: 18px; font-weight: bold; letter-spacing: 1px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .workspace { display: flex; height: calc(100vh - 105px); width: 100%; position: relative; }
+        .panel { width: 50%; padding: 30px; overflow-y: auto; height: 100%; background: white; transition: all 0.2s; }
+        .left-passage { border-right: 6px solid var(--border-color); line-height: 1.75; font-size: 16.5px; text-align: justify; padding-right: 35px; font-weight: 500; }
+        .left-passage h1 { font-size: 26px; color: #1e3a8a; font-weight: 700; margin-top: 0; border-bottom: 2px solid var(--bg-light); padding-bottom: 10px; }
+        .left-passage p { margin-bottom: 18px; text-indent: 20px; }
+        .right-questions { background-color: #f8fafc; padding-left: 35px; }
+        
+        .instruction-banner { background: #f1f5f9; padding: 12px 15px; font-weight: bold; margin: -30px -35px 25px -35px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+        .variant-card { background: #ffffff; padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .q-row { margin-bottom: 22px; font-size: 16px; line-height: 1.6; }
+        .q-row strong { font-size: 17px; color: #000; margin-right: 5px; font-weight: bold; }
+        
+        input[type="text"] { border: 1.5px solid #94a3b8; padding: 8px 12px; border-radius: 4px; font-size: 15px; width: 240px; outline: none; margin: 0 5px; transition: all 0.15s; font-weight: bold; color: #1e40af; }
+        input[type="text"]:focus { border-color: #2563eb; background-color: #eff6ff; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+        .options-wrapper label { display: flex; align-items: center; margin: 12px 0; cursor: pointer; padding: 8px 12px; border-radius: 5px; border: 1px solid transparent; transition: background 0.15s; font-weight: bold; }
+        .options-wrapper label:hover { background: #f1f5f9; border-color: var(--border-color); }
+        .options-wrapper input { margin-right: 12px; transform: scale(1.2); cursor: pointer; }
+        select.tf-selector { width: 160px; padding: 8px; border-radius: 4px; border: 1.5px solid #94a3b8; font-weight: bold; cursor: pointer; outline: none; color: #1e40af; }
+        select.tf-selector:focus { border-color: #2563eb; }
+        
+        footer.navigation-dock { background-color: var(--ielts-blue); height: 50px; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; color: white; border-top: 2px solid var(--border-color); }
+        .nav-dots { display: flex; gap: 8px; align-items: center; overflow-x: auto; max-width: 75%; padding: 5px 0; }
+        .dot { width: 28px; height: 28px; background: #475569; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; cursor: pointer; border: 1px solid transparent; }
+        .dot.answered { background: #16a34a; color: white; font-weight: bold; }
+        .submit-trigger-btn { background: #2563eb; color: white; border: none; padding: 8px 25px; font-weight: bold; border-radius: 4px; cursor: pointer; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s; }
+        .submit-trigger-btn:hover { background: #1d4ed8; }
+
+        .modal-bg { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.7); z-index: 999; backdrop-filter: blur(4px); }
+        .score-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); z-index: 1000; text-align: center; width: 420px; border: 1px solid var(--border-color); }
+        .score-modal h2 { margin: 0; color: var(--ielts-blue); font-size: 24px; }
+        .giant-score { font-size: 64px; font-weight: 800; color: #2563eb; margin: 15px 0; letter-spacing: -1px; }
+        .band-badge { display: inline-block; background: #f0fdf4; color: #16a34a; padding: 8px 20px; border-radius: 30px; font-size: 20px; font-weight: bold; border: 1px solid #bbf7d0; margin-bottom: 25px; }
+        .close-action { background: var(--ielts-blue); color: white; border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 15px; width: 100%; }
+        
+        .expired-msg { text-align: center; margin-top: 15%; padding: 40px; background: white; max-width: 500px; margin-left: auto; margin-right: auto; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-top: 5px solid var(--ielts-red); }
+    </style>
+</head>
+<body>
+
+<div id="app-viewport" style="display: flex; flex-direction: column; height: 100vh; width: 100%;">
+    <header>
+        <div class="logo-section">CD-IELTS Question Bank Portal <span class="logo-badge">Reading Practice</span></div>
+        <div class="timer-section" id="exam-timer">60:00</div>
+    </header>
+
+    <div class="workspace">
+        <div class="panel left-passage">
+            <h1 id="p-title">Loading Passage...</h1>
+            <div id="p-body">Loading simulation payload structural layer details...</div>
+        </div>
+
+        <div class="panel right-questions" id="q-panel-view">
+            <div id="dynamic-variants-root"></div>
+        </div>
+    </div>
+
+    <footer class="navigation-dock">
+        <span>Question Navigation:</span>
+        <div class="nav-dots" id="dots-wrapper"></div>
+        <button class="submit-trigger-btn" onclick="processExamGrading()">Submit Test</button>
+    </footer>
+</div>
+
+<div class="modal-bg" id="modal-overlay"></div>
+<div class="score-modal" id="score-popup">
+    <h2>Performance Scorecard</h2>
+    <p style="color:#64748b; margin-top:5px;">Your computational mock exam summary description</p>
+    <div class="giant-score" id="popup-raw-score">0/0</div>
+    <div class="band-badge" id="popup-band-level">Band: 0.0</div>
+    <button class="close-action" onclick="location.reload()">Review Answers</button>
+</div>
+
+<script>
+    let examDataset = null;
+    let globalTotalQuestions = 0;
+
+    const params = new URLSearchParams(window.location.search);
+    const encryptedPayload = params.get('payload');
+
+    if(encryptedPayload) {
+        let uniqueHash = btoa(encryptedPayload).substring(0, 15);
+        let currentUsageAttempts = parseInt(localStorage.getItem(`ielts_attempt_${uniqueHash}`)) || 0;
+
+        if(currentUsageAttempts >= 3) {
+            document.body.innerHTML = `
+                <div class="expired-msg">
+                    <h2 style="color:var(--ielts-red); margin-top:0;">Access Limit Exceeded!</h2>
+                    <p style="color:#475569; font-size:16px; line-height:1.5;">Sorry, you have already used your 3 maximum practice attempts for this specific book code scan. Link sharing is prohibited to prevent book piracy.</p>
+                </div>`;
+        } else {
+            localStorage.setItem(`ielts_attempt_${uniqueHash}`, currentUsageAttempts + 1);
+            bootstrappingExamEngine();
+        }
+    } else {
+        document.body.innerHTML = "<h2 style='text-align:center; margin-top:20%; color:#475569;'>No core configuration string found. Run generator configuration pipeline dashboard page panel!</h2>";
+    }
+
+    function bootstrappingExamEngine() {
+        try {
+            const rawDecodedJson = decodeURIComponent(escape(atob(encryptedPayload)));
+            examDataset = JSON.parse(rawDecodedJson);
+            renderIELTSInterface();
+        } catch(err) {
+            document.body.innerHTML = "<h2 style='text-align:center; margin-top:20%; color:var(--ielts-red);'>Critical Error: Broken or corrupted URL string mapping sequence data inputs!</h2>";
+        }
+    }
+
+    function renderIELTSInterface() {
+        document.getElementById('p-title').innerText = examDataset.title;
+        document.getElementById('p-body').innerHTML = examDataset.passage;
+        
+        const variantsRoot = document.getElementById('dynamic-variants-root');
+        variantsRoot.innerHTML = '';
+        
+        let qCounter = 1;
+
+        examDataset.groups.forEach((group) => {
+            let variantCard = document.createElement('div');
+            variantCard.className = 'variant-card';
+            
+            let htmlPayload = '';
+            if(group.type === "MCQ") {
+                htmlPayload += `<div class="instruction-banner">Questions ${qCounter} - ${qCounter + group.questions.length - 1}: Select the matching answer choice token letter A, B, C or D</div>`;
+                group.questions.forEach(q => {
+                    htmlPayload += `
+                        <div class="q-row" data-engine="MCQ" data-correct="${q.correct}" data-index="${qCounter}">
+                            <p><strong>${qCounter}. ${q.text}</strong></p>
+                            <div class="options-wrapper">
+                                <label><input type="radio" name="node_${qCounter}" value="A" onchange="markDotAnswered(${qCounter})"><strong>A.</strong> &nbsp;${q.options[0]}</label>
+                                <label><input type="radio" name="node_${qCounter}" value="B" onchange="markDotAnswered(${qCounter})"><strong>B.</strong> &nbsp;${q.options[1]}</label>
+                                <label><input type="radio" name="node_${qCounter}" value="C" onchange="markDotAnswered(${qCounter})"><strong>C.</strong> &nbsp;${q.options[2]}</label>
+                                <label><input type="radio" name="node_${qCounter}" value="D" onchange="markDotAnswered(${qCounter})"><strong>D.</strong> &nbsp;${q.options[3]}</label>
+                            </div>
+                        </div>`;
+                    qCounter++;
+                });
+            } else if(group.type === "GAP") {
+                htmlPayload += `<div class="instruction-banner">Questions ${qCounter} - ${qCounter + group.questions.length - 1}: Type the absolute phrase from the text directly to complete definitions</div>`;
+                group.questions.forEach(q => {
+                    let textInputReplace = q.text.replace("[blank]", `<input type="text" id="node_${qCounter}" autocomplete="off" oninput="markDotAnswered(${qCounter})">`);
+                    htmlPayload += `
+                        <div class="q-row" data-engine="GAP" data-correct="${q.correct}" data-index="${qCounter}">
+                            <p><strong>${qCounter}.</strong> ${textInputReplace}</p>
+                        </div>`;
+                    qCounter++;
+                });
+            } else if(group.type === "TF") {
+                htmlPayload += `<div class="instruction-banner">Questions ${qCounter} - ${qCounter + group.questions.length - 1}: Identify logic matches matching the arguments text array mapping context (TRUE / FALSE / NOT GIVEN)</div>`;
+                group.questions.forEach(q => {
+                    htmlPayload += `
+                        <div class="q-row" data-engine="TF" data-correct="${q.correct}" data-index="${qCounter}">
+                            <p style="margin-bottom:12px;"><strong>${qCounter}.</strong> ${q.text}</p>
+                            <select class="tf-selector" id="node_${qCounter}" onchange="markDotAnswered(${qCounter})">
+                                <option value="">-- Choose Option --</option>
+                                <option value="TRUE">TRUE</option>
+                                <option value="FALSE">FALSE</option>
+                                <option value="NOT GIVEN">NOT GIVEN</option>
+                            </select>
+                        </div>`;
+                    qCounter++;
+                });
+            }
+            variantCard.innerHTML = htmlPayload;
+            variantsRoot.appendChild(variantCard);
+        });
+
+        globalTotalQuestions = qCounter - 1;
+        buildNavigationDockDock(globalTotalQuestions);
+        initializeTimerClock(3600);
+    }
+
+    function buildNavigationDockDock(total) {
+        const wrapper = document.getElementById('dots-wrapper');
+        wrapper.innerHTML = '';
+        for(let i = 1; i <= total; i++) {
+            let dot = document.createElement('div');
+            dot.className = 'dot';
+            dot.id = `navdot_${i}`;
+            dot.innerText = i;
+            wrapper.appendChild(dot);
+        }
+    }
+
+    function markDotAnswered(index) {
+        const targetDot = document.getElementById(`navdot_${index}`);
+        if(!targetDot) return;
+        
+        let answered = false;
+        const mcqRadioCheck = document.querySelector(`input[name="node_${index}"]:checked`);
+        const textInputCheck = document.getElementById(`node_${index}`);
+
+        if(mcqRadioCheck) answered = true;
+        else if(textInputCheck && textInputCheck.tagName === "INPUT" && textInputCheck.value.trim() !== "") answered = true;
+        else if(textInputCheck && textInputCheck.tagName === "SELECT" && textInputCheck.value !== "") answered = true;
+
+        if(answered) targetDot.className = "dot answered";
+        else targetDot.className = "dot";
+    }
+
+    function initializeTimerClock(sec) {
+        const field = document.getElementById('exam-timer');
+        let countdown = sec;
+        const process = setInterval(() => {
+            let m = Math.floor(countdown / 60);
+            let s = countdown % 60;
+            field.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if(--countdown < 0) {
+                clearInterval(process);
+                processExamGrading();
+            }
+        }, 1000);
+    }
+
+    function computeIELTSBand(score, total) {
+        if(total === 0) return "0.0";
+        let scorePercent = (score / total) * 100;
+        if(scorePercent >= 90) return "9.0";
+        if(scorePercent >= 83) return "8.5";
+        if(scorePercent >= 75) return "7.5";
+        if(scorePercent >= 58) return "6.5";
+        if(scorePercent >= 45) return "5.5";
+        return "4.5 or under";
+    }
+
+    function processExamGrading() {
+        let correctTally = 0;
+        const activeRows = document.querySelectorAll('.q-row');
+
+        activeRows.forEach(row => {
+            const engineType = row.getAttribute('data-engine');
+            const truthKey = row.getAttribute('data-correct').toUpperCase().trim();
+            const index = row.getAttribute('data-index');
+            let candidateEntry = "";
+
+            if(engineType === "MCQ") {
+                const picked = document.querySelector(`input[name="node_${index}"]:checked`);
+                if(picked) candidateEntry = picked.value.toUpperCase().trim();
+            } else {
+                const DOMField = document.getElementById(`node_${index}`);
+                if(DOMField) candidateEntry = DOMField.value.toUpperCase().trim();
+            }
+
+            if(candidateEntry === truthKey && candidateEntry !== "") {
+                correctTally++;
+            }
+        });
+
+        document.getElementById('popup-raw-score').innerText = `${correctTally}/${globalTotalQuestions}`;
+        document.getElementById('popup-band-level').innerText = `Estimated Band: ${computeIELTSBand(correctTally, globalTotalQuestions)}`;
+        document.getElementById('modal-overlay').style.display = 'block';
+        document.getElementById('score-popup').style.display = 'block';
+    }
+</script>
+</body>
+</html>
